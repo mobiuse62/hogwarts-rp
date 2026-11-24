@@ -68,7 +68,6 @@
   },
   {
    "id": "mwu8a5epz8v2z",
-   "image": "images/mwu8a5epz8v2z-mwu8a5ep.jpg",
    "nom": "Veaudelune",
    "espece": "Bête",
    "danger": "Inoffensif",
@@ -77,7 +76,21 @@
    "comportement": "Nocturne, sort uniquement la nuit pour danser au clair de lune.",
    "faiblesses": "Glacius, Arresto Momentum",
    "butin": "Poils de Veaudelune",
+   "image": "images/mwu8a5epz8v2z-mwu8a5ep.jpg",
    "updated": 1795496542212
+  },
+  {
+   "id": "mwu8bfwqbgixx",
+   "image": "images/mwu8bfwqbgixx-mwu8bfwq.jpg",
+   "nom": "Niffleur",
+   "espece": "Bête",
+   "danger": "Inoffensif",
+   "habitat": "Côtes, grottes, ruines",
+   "description": "Créature noire à fourrure dotée d'un long museau plat semblable à celui d'un ornithorynque.",
+   "comportement": "Obsédé par tout ce qui brille, rapide et fuyant.",
+   "faiblesses": "Accio, Arresto Momentum",
+   "butin": "Fourrure de Niffleur",
+   "updated": 1795496602317
   }
  ],
  "deleted": {
