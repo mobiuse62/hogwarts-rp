@@ -213,6 +213,19 @@
    "butin": "Crins de Licorne",
    "image": "images/mwu8jx181zw27-mwu8jx18.jpg",
    "updated": 1795496997839
+  },
+  {
+   "id": "mwv8kjju8jipl",
+   "image": "images/mwv8kjju8jipl-mwv8kjju.jpg",
+   "nom": "Phénix",
+   "espece": "Créature magique",
+   "danger": "Inoffensif",
+   "habitat": "Montagnes",
+   "description": "Oiseau magnifique au plumage rouge et or, unique dans le jeu.",
+   "comportement": "Pacifique, se laisse approcher une fois son nid atteint.",
+   "faiblesses": "Aucun connu ?",
+   "butin": "Plumes de Phénix",
+   "updated": 1795557493308
   }
  ],
  "deleted": {
