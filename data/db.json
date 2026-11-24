@@ -42,7 +42,6 @@
  "bestiaire": [
   {
    "id": "mwu83t8fi38sh",
-   "image": "images/mwu83t8fi38sh-mwu83t8f.jpg",
    "nom": "Boursouf",
    "espece": "Bête",
    "danger": "Inoffensif",
@@ -51,7 +50,21 @@
    "comportement": "Docile, curieux, se laisse approcher facilement.",
    "faiblesses": "Levioso, Accio",
    "butin": "Poils de Boursouf",
+   "image": "images/mwu83t8fi38sh-mwu83t8f.jpg",
    "updated": 1795496246278
+  },
+  {
+   "id": "mwu86yn8pz11x",
+   "image": "images/mwu86yn8pz11x-mwu86yn8.jpg",
+   "nom": "Jobarbille",
+   "espece": "Bête",
+   "danger": "Inoffensif",
+   "habitat": "Régions boisées, ruines",
+   "description": "Petit oiseau bleu moucheté au bec pointu.",
+   "comportement": "Craintif, s'envole dès qu'il repère un sorcier.",
+   "faiblesses": "Arresto Momentum, Levioso",
+   "butin": "Plumes de Jobarbille",
+   "updated": 1795496393475
   }
  ],
  "deleted": {
