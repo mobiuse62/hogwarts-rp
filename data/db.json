@@ -6,14 +6,36 @@
    "sorts": [],
    "cours": [],
    "potions": [],
-   "relations": [],
+   "relations": [
+    {
+     "id": "mwu69xscm3rsv",
+     "profileId": "mwu69jzo7dy0o",
+     "prenom": "",
+     "nom": "",
+     "statut": "Amoureux",
+     "note": ""
+    }
+   ],
    "image": "images/mwu68istgi3xu-mwu68ist.jpg",
    "prenom": "Théo",
    "nom": "Finch",
    "maison": "Serpentard",
    "annee": "1",
    "description": "Sang-pur",
-   "updated": 1795493106941
+   "updated": 1795493171532
+  },
+  {
+   "id": "mwu69jzo7dy0o",
+   "sorts": [],
+   "cours": [],
+   "potions": [],
+   "relations": [],
+   "prenom": "Morgana",
+   "nom": "Ravenclaw",
+   "maison": "Serpentard",
+   "annee": "1",
+   "description": "à toi d'edit m'dame",
+   "updated": 1795493153652
   }
  ],
  "deleted": {}
