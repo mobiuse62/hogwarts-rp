@@ -81,7 +81,6 @@
   },
   {
    "id": "mwu8bfwqbgixx",
-   "image": "images/mwu8bfwqbgixx-mwu8bfwq.jpg",
    "nom": "Niffleur",
    "espece": "Bête",
    "danger": "Inoffensif",
@@ -90,7 +89,21 @@
    "comportement": "Obsédé par tout ce qui brille, rapide et fuyant.",
    "faiblesses": "Accio, Arresto Momentum",
    "butin": "Fourrure de Niffleur",
+   "image": "images/mwu8bfwqbgixx-mwu8bfwq.jpg",
    "updated": 1795496602317
+  },
+  {
+   "id": "mwu8dfnd3lmxl",
+   "image": "images/mwu8dfnd3lmxl-mwu8dfnd.jpg",
+   "nom": "Focifère",
+   "espece": "Bête",
+   "danger": "Inoffensif",
+   "habitat": "Forêt Interdite, marais",
+   "description": "Oiseau exotique au plumage vif (rose, vert, orange ou bleu).",
+   "comportement": "Très nerveux, s'enfuit rapidement au moindre bruit.",
+   "faiblesses": "Arresto Momentum, Glacius",
+   "butin": "Plumes de Focifère",
+   "updated": 1795496695433
   }
  ],
  "deleted": {
