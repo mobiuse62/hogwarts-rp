@@ -1,6 +1,3 @@
-/* ===== Registre de Poudlard : un grimoire sur un bureau, à la bougie =====
-   Tout est en CSS (aucune image) : texture du papier, cire, cadres, tampons.
-   Couleurs et polices à modifier dans :root. */
 :root {
   --desk: #1d1510;
   --leather: #261b13;
@@ -15,8 +12,8 @@
   --gold-hi: #e0bf6a;
   --wood: #2e2016;
   --danger: #8e1b22;
-  --house: #7a1523;       /* remplissage (sceau, fanion) */
-  --house-ink: #6b1020;   /* texte, lisible sur parchemin */
+  --house: #7a1523;       
+  --house-ink: #6b1020;   
   --on-house: #f4e8c8;
   --radius: 5px;
   --body: "IM Fell English", "Palatino Linotype", Palatino, Georgia, serif;
@@ -44,7 +41,6 @@ a:hover { color: var(--wax-dk); text-decoration: underline; text-underline-offse
 :focus-visible { outline: 2px solid var(--wax); outline-offset: 2px; }
 p { margin: 0; }
 
-/* ----- Barre en cuir ----- */
 .top {
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
@@ -83,7 +79,6 @@ p { margin: 0; }
 .pill.s-local::before { color: #86b4de; }
 .pill.s-ro::before { color: #9a8a6a; }
 
-/* ----- Boutons ----- */
 .btn {
   font: inherit; font-size: 1rem; line-height: 1; cursor: pointer;
   padding: 11px 17px;
@@ -101,7 +96,6 @@ p { margin: 0; }
 .btn.danger { background: transparent; color: var(--danger); border: 1.5px solid var(--danger); box-shadow: none; border-radius: 4px; }
 .btn.sm { padding: 7px 12px; font-size: .92rem; }
 
-/* ----- La feuille de parchemin ----- */
 main {
   position: relative; outline: none;
   width: min(1080px, calc(100% - 20px)); min-height: calc(100vh - 150px);
@@ -121,7 +115,6 @@ main {
 .toolbar { display: flex; gap: 12px; margin-bottom: 30px; flex-wrap: wrap; align-items: center; }
 .toolbar input[type=search] { flex: 1 1 220px; }
 
-/* Champs : écrits directement sur la page */
 input, select, textarea {
   width: 100%; font: inherit; color: var(--ink);
   background: rgba(255, 248, 224, .28);
@@ -133,7 +126,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-bottom-color: 
 textarea { resize: vertical; min-height: 90px; }
 input[type=file] { padding: 8px; font-size: .9rem; }
 
-/* ----- Portraits : cadres de bois et sceaux de cire ----- */
 .grid { display: grid; gap: 34px 26px; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); padding: 6px 4px; }
 .card { --seal: var(--house); display: flex; flex-direction: column; color: var(--ink); }
 .card:hover { color: var(--ink); text-decoration: none; }
@@ -151,7 +143,7 @@ input[type=file] { padding: 8px; font-size: .9rem; }
 .card:hover .card-img { box-shadow: 0 0 0 1px #0d0804, 0 0 18px rgba(224, 160, 50, .6), 0 8px 16px rgba(40, 22, 8, .5), inset 0 0 14px rgba(0, 0, 0, .6); }
 
 .card-body { position: relative; padding: 16px 6px 0; display: grid; gap: 3px; }
-.card-body::before {  /* sceau de cire */
+.card-body::before { 
   content: ""; position: absolute; right: 6px; top: -17px; width: 30px; height: 30px;
   background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--seal) 70%, #fff 30%), var(--seal) 55%, color-mix(in srgb, var(--seal) 55%, #000 45%));
   border-radius: 50% 46% 52% 48% / 48% 52% 46% 50%;
@@ -176,7 +168,6 @@ input[type=file] { padding: 8px; font-size: .9rem; }
 .avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex: none; border: 2px solid var(--wood); outline: 1px solid var(--gold); outline-offset: -4px; font-size: 1rem; }
 .avatar.ph { font-size: 1rem; }
 
-/* ----- Fiche ----- */
 .back { display: inline-block; margin-bottom: 18px; font-style: italic; }
 .hero { display: grid; grid-template-columns: 190px 1fr; gap: 30px; align-items: start; padding-bottom: 26px; border-bottom: 3px double var(--rule); }
 .hero-img { width: 190px; }
@@ -191,13 +182,12 @@ input[type=file] { padding: 8px; font-size: .9rem; }
   padding: 3px 9px; color: var(--ink-soft);
   border: 3px double currentColor; border-radius: 3px; transform: rotate(-1.4deg);
 }
-.tag.house-tag {  /* fanion en écu */
+.tag.house-tag {  
   color: var(--on-house); background: var(--house); border: 0; transform: none; border-radius: 0;
   padding: 7px 16px 20px; font-variant: normal; letter-spacing: .02em; font-size: 1.05rem; margin-bottom: -6px;
   clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
 }
 
-/* Signets en ruban : l'onglet actif pend plus bas */
 .tabs { display: flex; gap: 12px; margin: 26px 0 22px; padding: 0 4px; align-items: flex-start; overflow-x: auto; border-top: 4px solid var(--wood); }
 .tab {
   font: inherit; font-size: 1.02rem; line-height: 1.2; cursor: pointer; white-space: nowrap;
@@ -213,7 +203,6 @@ input[type=file] { padding: 8px; font-size: .9rem; }
 .panel-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; padding-bottom: 8px; border-bottom: 3px double var(--rule); }
 .panel-bar h2 { font: 700 1.2rem/1.2 var(--display); }
 
-/* Entrées : séparées par des filets d'encre, sans cartes */
 .rows { list-style: none; margin: 0; padding: 0; }
 .rows > li { border-bottom: 1px solid var(--rule); }
 .rows > li:last-child { border-bottom: 0; }
@@ -238,7 +227,6 @@ details.row .sum-main strong { font-size: 1.15rem; font-weight: 400; }
 .rel { align-items: center; justify-content: flex-start; }
 .rel .btn { margin-left: auto; }
 
-/* Statuts de relation : tampons d'encre */
 .st { --c: var(--ink-soft); color: var(--c); }
 .st-good { --c: #2f6b3a; }
 .st-ally { --c: #2b5f8f; }
@@ -249,12 +237,10 @@ details.row .sum-main strong { font-size: 1.15rem; font-weight: 400; }
 .st-fam { --c: #5d4a8f; }
 .st-mentor { --c: #1f6f6a; }
 
-/* Bestiaire : sections de la fiche */
 .sec { margin-top: 24px; max-width: 70ch; }
 .sec h2 { font: italic 400 1.25rem/1.3 var(--body); color: var(--wax); padding-bottom: 4px; margin-bottom: 8px; border-bottom: 1px solid var(--rule); }
 .sec p { white-space: pre-wrap; }
 
-/* ----- Fenêtres : une lettre sur parchemin ----- */
 dialog.modal {
   width: min(560px, 94vw); max-height: 92vh; overflow: auto; padding: 0;
   color: var(--ink); border: 1px solid #6b5538; border-radius: 5px 8px 6px 9px / 8px 5px 9px 6px;
@@ -274,7 +260,6 @@ dialog::backdrop { background: rgba(12, 7, 3, .78); }
 .tools { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px; }
 .tools input[type=file] { display: none; }
 
-/* ----- Notification : un petit mot sur le bureau ----- */
 .toast {
   position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
   max-width: min(92vw, 520px); padding: 12px 18px; border-radius: 3px;
@@ -287,7 +272,6 @@ dialog::backdrop { background: rgba(12, 7, 3, .78); }
 
 .foot { text-align: center; padding: 6px 16px 40px; color: #a8916a; font-style: italic; font-size: .92rem; }
 
-/* ----- Mobile ----- */
 @media (max-width: 700px) {
   .top { flex-wrap: wrap; position: static; }
   .nav { order: 3; width: 100%; }
