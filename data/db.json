@@ -107,7 +107,6 @@
   },
   {
    "id": "mwu8eka7hvkkr",
-   "image": "images/mwu8eka7hvkkr-mwu8eka7.jpg",
    "nom": "Dirico",
    "espece": "Bête",
    "danger": "Inoffensif",
@@ -116,7 +115,21 @@
    "comportement": "Docile, se téléporte dans un nuage de plumes s'il se sent menacé.",
    "faiblesses": "Glacius, Arresto Momentum",
    "butin": "Plumes de Dirico",
+   "image": "images/mwu8eka7hvkkr-mwu8eka7.jpg",
    "updated": 1795496748068
+  },
+  {
+   "id": "mwu8fxzrwtpj1",
+   "image": "images/mwu8fxzrwtpj1-mwu8fxzr.jpg",
+   "nom": "Crapaud violet géant",
+   "espece": "Bête",
+   "danger": "Inoffensif",
+   "habitat": "Marais, zones humides",
+   "description": "Énorme crapaud violet couvert de verrues.",
+   "comportement": "Lent, passif, reste souvent immobile près de l'eau.",
+   "faiblesses": "Levioso, Accio",
+   "butin": "Verrues de crapaud",
+   "updated": 1795496812421
   }
  ],
  "deleted": {
