@@ -85,8 +85,7 @@ const explain = (s, m) => ({
   401: 'Token invalide ou expiré.',
   403: 'Accès refusé (droits du token insuffisants, ou limite de requêtes atteinte).',
   404: 'Introuvable : vérifiez le compte, le dépôt, la branche et l’accès du token à ce dépôt.',
-  409: 'Conflit de version.', 422: 'Conflit de version.',
-}[s] || m || ('Erreur ' + s));
+}[s] || (s === 409 || s === 422 ? 'Refusé par GitHub (' + (m || s) + ').' : m || ('Erreur ' + s)));
 
 async function gh(path, opts = {}) {
   if (!/^[\w-]+$/.test(cfg.token)) {
@@ -131,7 +130,8 @@ const enqueue = fn => { const r = queue.then(fn); queue = r.catch(() => {}); ret
 /** Lit data/db.json via l'API (toujours à jour, contrairement à Pages). */
 async function fetchRemote() {
   try {
-    const f = await gh('contents/' + DATA_PATH + ref());
+    // « &t=… » : GitHub autorise le navigateur à garder cette réponse 60 s ; sans ça, le sha serait périmé.
+    const f = await gh('contents/' + DATA_PATH + ref() + '&t=' + Date.now());
     const bytes = f.content ? fromB64(f.content) : fromB64((await gh('git/blobs/' + f.sha)).content);
     return { db: normalize(JSON.parse(new TextDecoder().decode(bytes))), sha: f.sha };
   } catch (e) {
@@ -254,7 +254,7 @@ function deleteImage(path) {
   if (!hasToken() || !/^images\//.test(path || '')) return;
   enqueue(async () => {
     try {
-      const meta = await gh('contents/' + path + ref());
+      const meta = await gh('contents/' + path + ref() + '&t=' + Date.now());
       await gh('contents/' + path, { method: 'DELETE', body: JSON.stringify({ message: 'RP : suppression image', sha: meta.sha, branch: cfg.branch }) });
     } catch { /* image déjà absente : sans gravité */ }
   });
