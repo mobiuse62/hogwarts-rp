@@ -80,7 +80,6 @@ const API = () => `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/`;
 const headers = accept => ({
   Accept: accept || 'application/vnd.github+json',
   Authorization: 'Bearer ' + cfg.token,
-  'X-GitHub-Api-Version': '2022-11-28',
 });
 const explain = (s, m) => ({
   401: 'Token invalide ou expiré.',
@@ -90,6 +89,10 @@ const explain = (s, m) => ({
 }[s] || m || ('Erreur ' + s));
 
 async function gh(path, opts = {}) {
+  if (!/^[\w-]+$/.test(cfg.token)) {
+    const e = new Error('Le token contient un caractère invalide (espace, guillemet, « … »). Recopiez-le exactement depuis GitHub.');
+    e.status = 0; throw e;
+  }
   let res;
   try {
     res = await fetch(API() + path, {
@@ -97,7 +100,12 @@ async function gh(path, opts = {}) {
       headers: { ...headers(), ...(opts.body ? { 'Content-Type': 'application/json' } : {}) },
     });
   } catch {
-    const e = new Error('Impossible de joindre api.github.com : bloqueur de pub / extension de confidentialité, VPN, antivirus ou réseau filtré ? Testez en navigation privée ou sur un autre réseau.');
+    // Diagnostic : GitHub est-il joignable sans token ?
+    let reach = false;
+    try { reach = (await fetch('https://api.github.com/zen', { cache: 'no-store' })).ok; } catch { /* injoignable */ }
+    const e = new Error(reach
+      ? 'GitHub est joignable, mais la requête avec le token est bloquée avant d’arriver (extension du navigateur ou filtre réseau). Désactivez vos extensions ou testez en navigation privée.'
+      : 'Ce navigateur ou ce réseau n’arrive pas à joindre api.github.com (bloqueur de pub, VPN, antivirus, DNS ou réseau filtré, ou hors ligne). Testez en navigation privée, en 4G ou avec un autre navigateur.');
     e.status = 0; throw e;
   }
   if (!res.ok) {
