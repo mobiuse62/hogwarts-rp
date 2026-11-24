@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registre de Poudlard · RP</title>
+<meta name="description" content="Registre de personnages pour un RP Hogwarts Legacy : profils, sortilèges, cours, potions et relations.">
+<meta name="theme-color" content="#0d0f17">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d0f17'/%3E%3Cpath d='M34 6 18 36h12l-4 22 20-32H33z' fill='%23d4af6a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="#/" aria-label="Retour à l'accueil">
+    <span class="brand-mark" aria-hidden="true">⚡</span>
+    <span>Registre de Poudlard</span>
+  </a>
+  <div class="top-actions">
+    <button id="status" class="pill" type="button"></button>
+    <button id="btn-settings" class="btn ghost sm" type="button">Réglages</button>
+  </div>
+</header>
+
+<main id="app" tabindex="-1"></main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<noscript><p class="loading">Ce site a besoin de JavaScript pour fonctionner.</p></noscript>
+
+<!-- Suggestions d'autocomplétion : modifiez librement ces listes -->
+<datalist id="dl-sorts">
+  <option value="Lumos"><option value="Accio"><option value="Reparo"><option value="Incendio">
+  <option value="Wingardium Leviosa"><option value="Alohomora"><option value="Expelliarmus">
+  <option value="Protego"><option value="Stupéfix"><option value="Confringo"><option value="Depulso">
+  <option value="Descendo"><option value="Glacius"><option value="Levioso"><option value="Revelio">
+  <option value="Petrificus Totalus"><option value="Diffindo"><option value="Bombarda">
+  <option value="Flipendo"><option value="Episkey"><option value="Confundo"><option value="Evanesco">
+  <option value="Arresto Momentum"><option value="Oppugno">
+</datalist>
+<datalist id="dl-matieres">
+  <option value="Sortilèges"><option value="Défense contre les Forces du Mal"><option value="Botanique">
+  <option value="Potions"><option value="Métamorphose"><option value="Astronomie"><option value="Divination">
+  <option value="Histoire de la Magie"><option value="Soins aux Créatures Magiques"><option value="Vol">
+</datalist>
+<datalist id="dl-statuts">
+  <option value="Ami"><option value="Meilleur ami"><option value="Allié"><option value="Mitigé">
+  <option value="Rival"><option value="Ennemi"><option value="Amoureux"><option value="Famille">
+  <option value="Mentor"><option value="Camarade de classe"><option value="Inconnu">
+</datalist>
+<datalist id="dl-potions">
+  <option value="Potion Wiggenweld"><option value="Potion Edurus"><option value="Potion Maxima">
+  <option value="Potion Tue-Loup"><option value="Felix Felicis"><option value="Polynectar"><option value="Veritaserum">
+</datalist>
+
+</body>
+</html>
