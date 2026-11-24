@@ -55,7 +55,6 @@
   },
   {
    "id": "mwu86yn8pz11x",
-   "image": "images/mwu86yn8pz11x-mwu86yn8.jpg",
    "nom": "Jobarbille",
    "espece": "Bête",
    "danger": "Inoffensif",
@@ -64,7 +63,21 @@
    "comportement": "Craintif, s'envole dès qu'il repère un sorcier.",
    "faiblesses": "Arresto Momentum, Levioso",
    "butin": "Plumes de Jobarbille",
+   "image": "images/mwu86yn8pz11x-mwu86yn8.jpg",
    "updated": 1795496393475
+  },
+  {
+   "id": "mwu8a5epz8v2z",
+   "image": "images/mwu8a5epz8v2z-mwu8a5ep.jpg",
+   "nom": "Veaudelune",
+   "espece": "Bête",
+   "danger": "Inoffensif",
+   "habitat": "Vallée de Poudlard, régions rocheuses",
+   "description": "Créature timide au corps lisse et grisâtre avec de grands yeux globuleux.",
+   "comportement": "Nocturne, sort uniquement la nuit pour danser au clair de lune.",
+   "faiblesses": "Glacius, Arresto Momentum",
+   "butin": "Poils de Veaudelune",
+   "updated": 1795496542212
   }
  ],
  "deleted": {
