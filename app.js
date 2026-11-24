@@ -13,6 +13,8 @@ const LS_DB = 'hrp.db.v1';
 const LS_CFG = 'hrp.cfg.v1';
 const HOUSES = ['Gryffondor', 'Serpentard', 'Poufsouffle', 'Serdaigle'];
 const MASTERY = ['Débutant', 'Appris', 'Maîtrisé'];
+const DANGERS = ['Inoffensif', 'Faible', 'Modéré', 'Dangereux', 'Mortel'];
+const DANGER_CLS = { Inoffensif: 'st-good', Faible: 'st-ally', 'Modéré': 'st-mid', Dangereux: 'st-rival', Mortel: 'st-bad' };
 const IMG_OK = /^(images\/[\w.\-]+|data:image\/)/;
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -52,14 +54,14 @@ let remoteSha = null;
 let rev = 0;                 // incrémenté à chaque modification
 let sync = 'synced';         // synced | pending | saving | error
 let writable = true;         // false si la lecture via l'API a échoué (évite d'écraser des données)
-let ui = { tab: 'sorts', q: '' };
+let ui = { tab: 'sorts', q: '', qb: '' };
 const imgCache = new Map();  // chemin → blob: URL (images tout juste envoyées)
 
 const hasToken = () => !!(cfg.token && cfg.owner && cfg.repo);
 const canEdit = () => writable && (hasToken() || !isHosted);
 
 function normalize(x) {
-  const out = { version: 1, profiles: [], deleted: {} };
+  const out = { version: 1, profiles: [], bestiaire: [], deleted: {} };
   if (!x || !Array.isArray(x.profiles)) return out;
   if (x.deleted && typeof x.deleted === 'object') out.deleted = x.deleted;
   const arr = v => (Array.isArray(v) ? v.filter(i => i && typeof i === 'object') : []);
@@ -71,6 +73,14 @@ function normalize(x) {
     image: IMG_OK.test(p.image || '') ? p.image : '',
     updated: +p.updated || 0,
     sorts: arr(p.sorts), cours: arr(p.cours), potions: arr(p.potions), relations: arr(p.relations),
+  }));
+  const t = v => String(v || '');
+  out.bestiaire = arr(x.bestiaire).map(b => ({
+    id: String(b.id || uid()).replace(/[^\w-]/g, ''),
+    nom: t(b.nom), espece: t(b.espece), danger: DANGERS.includes(b.danger) ? b.danger : '',
+    habitat: t(b.habitat), description: t(b.description), comportement: t(b.comportement),
+    faiblesses: t(b.faiblesses), butin: t(b.butin),
+    image: IMG_OK.test(b.image || '') ? b.image : '', updated: +b.updated || 0,
   }));
   return out;
 }
@@ -143,13 +153,21 @@ async function fetchRemote() {
 /** Fusionne deux versions : par profil, la plus récente gagne ; les suppressions sont mémorisées. */
 function mergeDB(remote, local) {
   const del = { ...remote.deleted, ...local.deleted };
-  const map = new Map();
-  for (const p of [...remote.profiles, ...local.profiles]) {
-    if (del[p.id] && del[p.id] >= (p.updated || 0)) continue;
-    const o = map.get(p.id);
-    if (!o || (p.updated || 0) > (o.updated || 0)) map.set(p.id, p);
-  }
-  return { version: 1, profiles: [...map.values()], deleted: del };
+  const mergeList = (a, b) => {
+    const map = new Map();
+    for (const p of [...a, ...b]) {
+      if (del[p.id] && del[p.id] >= (p.updated || 0)) continue;
+      const o = map.get(p.id);
+      if (!o || (p.updated || 0) > (o.updated || 0)) map.set(p.id, p);
+    }
+    return [...map.values()];
+  };
+  return {
+    version: 1,
+    profiles: mergeList(remote.profiles, local.profiles),
+    bestiaire: mergeList(remote.bestiaire, local.bestiaire),
+    deleted: del,
+  };
 }
 
 async function refresh() {
@@ -261,7 +279,7 @@ function deleteImage(path) {
 }
 
 async function migrateImages() {
-  for (const p of db.profiles) {
+  for (const p of [...db.profiles, ...db.bestiaire]) {
     if (p.image && p.image.startsWith('data:')) {
       const blob = await (await fetch(p.image)).blob();
       p.image = await storeImage(p.id, blob);
@@ -285,7 +303,7 @@ async function fallbackImg(img, path, p) {
 }
 
 /* ================= Interface : briques ================= */
-const initials = p => ((p.prenom || '?')[0] + (p.nom || '')[0]).toUpperCase();
+const initials = p => ((p.prenom || '?').charAt(0) + (p.nom || '').charAt(0)).toUpperCase();
 const fullName = p => `${p.prenom} ${p.nom}`.trim();
 const placeholder = (p, cls) => h('div', { class: cls + ' ph', 'aria-hidden': 'true' }, initials(p));
 
@@ -518,18 +536,127 @@ const app = $('#app');
 
 function render() {
   const y = scrollY;
-  const m = location.hash.match(/^#\/p\/([\w-]+)/);
+  const hash = location.hash;
+  const mp = hash.match(/^#\/p\/([\w-]+)/);
+  const mb = hash.match(/^#\/b\/([\w-]+)/);
+  let section = 'persos';
   app.replaceChildren();
-  if (m) {
-    const p = db.profiles.find(x => x.id === m[1]);
+  if (mp) {
+    const p = db.profiles.find(x => x.id === mp[1]);
     if (!p) { location.replace('#/'); return; }
     document.title = `${fullName(p)} · Registre de Poudlard`;
     app.append(viewProfile(p));
+  } else if (mb) {
+    section = 'best';
+    const b = db.bestiaire.find(x => x.id === mb[1]);
+    if (!b) { location.replace('#/bestiaire'); return; }
+    document.title = `${b.nom} · Bestiaire`;
+    app.append(viewBeast(b));
+  } else if (hash.startsWith('#/bestiaire')) {
+    section = 'best';
+    document.title = 'Bestiaire · Registre de Poudlard';
+    app.append(viewBestiary());
   } else {
     document.title = 'Registre de Poudlard · RP';
     app.append(viewList());
   }
+  for (const a of document.querySelectorAll('.nav a')) a.setAttribute('aria-current', a.dataset.nav === section ? 'page' : 'false');
   scrollTo(0, y);
+}
+
+/* ================= Bestiaire (indépendant des profils) ================= */
+const asPortrait = b => ({ prenom: b.nom, nom: '', image: b.image });
+
+function editBeast(existing) {
+  const imgF = imageField(existing && existing.image);
+  const fields = [
+    { key: 'nom', label: 'Nom de la créature', required: true, max: 80 },
+    { key: 'espece', label: 'Type / famille', list: 'dl-types', max: 60, placeholder: 'ex. Bête, Esprit, Arachnide…' },
+    { key: 'danger', label: 'Dangerosité', type: 'select', options: [{ value: '', label: '— Inconnue —' }, ...DANGERS.map(d => ({ value: d, label: d }))] },
+    { key: 'habitat', label: 'Habitat', max: 160, placeholder: 'ex. Forêt Interdite, Hogsmeade…' },
+    { key: 'description', label: 'Description', type: 'textarea', rows: 5, max: 4000 },
+    { key: 'comportement', label: 'Comportement', type: 'textarea', rows: 3, max: 2000 },
+    { key: 'faiblesses', label: 'Points faibles / sortilèges efficaces', type: 'textarea', rows: 3, max: 2000 },
+    { key: 'butin', label: 'Butin / ingrédients récoltables', type: 'textarea', rows: 3, max: 2000 },
+    { key: '__image', ...imgF },
+  ];
+  openForm({
+    title: existing ? 'Modifier la créature' : 'Nouvelle créature',
+    fields, values: existing || {},
+    onSave: async data => {
+      const b = existing || { id: uid(), image: '' };
+      const old = b.image;
+      const { blob, removed } = data.__image;
+      if (blob) b.image = await storeImage(b.id, blob);
+      else if (removed) b.image = '';
+      Object.assign(b, {
+        nom: data.nom, espece: data.espece, danger: data.danger, habitat: data.habitat,
+        description: data.description, comportement: data.comportement, faiblesses: data.faiblesses, butin: data.butin,
+        updated: Date.now(),
+      });
+      if (!existing) { db.bestiaire.push(b); location.hash = '#/b/' + b.id; }
+      commit();
+      if (old && old !== b.image) deleteImage(old);
+    },
+    onDelete: existing && (() => {
+      if (!confirm(`Supprimer « ${existing.nom} » du bestiaire ?`)) return false;
+      db.bestiaire = db.bestiaire.filter(x => x !== existing);
+      db.deleted[existing.id] = Date.now();
+      deleteImage(existing.image);
+      location.hash = '#/bestiaire';
+      commit();
+    }),
+  });
+}
+
+function viewBestiary() {
+  const grid = h('div', { class: 'grid' });
+  const empty = h('div', { class: 'empty' });
+  const fill = () => {
+    const q = norm(ui.qb);
+    const list = db.bestiaire
+      .filter(b => !q || norm(`${b.nom} ${b.espece} ${b.habitat} ${b.danger}`).includes(q))
+      .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+    grid.replaceChildren(...list.map(beastCard));
+    empty.hidden = list.length > 0;
+    empty.replaceChildren(db.bestiaire.length
+      ? h('p', {}, 'Aucune créature ne correspond à cette recherche.')
+      : h('p', {}, h('strong', {}, 'Le bestiaire est vide.'), canEdit() ? 'Cliquez sur « Nouvelle créature » pour ajouter la première.' : 'Aucune créature n’a encore été publiée.'));
+  };
+  const search = h('input', { type: 'search', placeholder: 'Rechercher une créature, un type, un habitat…', 'aria-label': 'Rechercher', value: ui.qb });
+  search.addEventListener('input', () => { ui.qb = search.value; fill(); });
+  fill();
+  return h('section', {},
+    h('div', { class: 'toolbar' }, search, canEdit() && h('button', { class: 'btn', type: 'button', onclick: () => editBeast() }, '+ Nouvelle créature')),
+    grid, empty);
+}
+
+function beastCard(b) {
+  return h('a', { class: 'card', href: '#/b/' + b.id },
+    portrait(asPortrait(b), 'card-img'),
+    h('div', { class: 'card-body' },
+      h('h3', {}, b.nom),
+      b.espece && h('span', { class: 'house' }, b.espece),
+      b.danger && h('span', { class: 'tag st ' + DANGER_CLS[b.danger] }, b.danger)));
+}
+
+function viewBeast(b) {
+  const sec = (title, text) => text && h('section', { class: 'sec' }, h('h2', {}, title), h('p', {}, text));
+  return h('article', {},
+    h('a', { class: 'back', href: '#/bestiaire' }, '← Tout le bestiaire'),
+    h('div', { class: 'hero' },
+      portrait(asPortrait(b), 'hero-img'),
+      h('div', {},
+        h('h1', {}, b.nom),
+        h('div', { class: 'meta' },
+          b.espece && h('span', { class: 'tag' }, b.espece),
+          b.danger && h('span', { class: 'tag st ' + DANGER_CLS[b.danger] }, 'Danger : ' + b.danger),
+          b.habitat && h('span', { class: 'tag' }, 'Habitat : ' + b.habitat)),
+        b.description && h('p', { class: 'desc' }, b.description),
+        canEdit() && h('button', { class: 'btn ghost sm', type: 'button', onclick: () => editBeast(b) }, 'Modifier la fiche'))),
+    sec('Comportement', b.comportement),
+    sec('Points faibles / sortilèges efficaces', b.faiblesses),
+    sec('Butin / ingrédients', b.butin));
 }
 
 function viewList() {
@@ -651,8 +778,8 @@ function exportJSON() {
 async function importJSON(file) {
   try {
     const data = normalize(JSON.parse(await file.text()));
-    if (!data.profiles.length) return toast('Fichier vide ou invalide.', 'err');
-    if (!confirm(`Remplacer toutes les données actuelles par ce fichier (${data.profiles.length} profil(s)) ?`)) return;
+    if (!data.profiles.length && !data.bestiaire.length) return toast('Fichier vide ou invalide.', 'err');
+    if (!confirm(`Remplacer toutes les données actuelles par ce fichier (${data.profiles.length} profil(s), ${data.bestiaire.length} créature(s)) ?`)) return;
     db = data;
     if (hasToken()) await migrateImages();
     commit(); toast('Import terminé.');
