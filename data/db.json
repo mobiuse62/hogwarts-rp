@@ -9,7 +9,7 @@
    "annee": "1",
    "description": "Sang-pur",
    "image": "images/mwu68istgi3xu-mwu68ist.jpg",
-   "updated": 1795493171532,
+   "updated": 1795556443966,
    "sorts": [],
    "cours": [],
    "potions": [],
@@ -20,6 +20,14 @@
      "prenom": "",
      "nom": "",
      "statut": "Amoureux",
+     "note": ""
+    },
+    {
+     "id": "mwv7y33yfn3gl",
+     "profileId": "mwv7wvmtzymnv",
+     "prenom": "",
+     "nom": "",
+     "statut": "Ami",
      "note": ""
     }
    ]
@@ -54,16 +62,17 @@
   },
   {
    "id": "mwv7xeny5b7ax",
-   "sorts": [],
-   "cours": [],
-   "potions": [],
-   "relations": [],
    "prenom": "Dax",
    "nom": "Grim",
    "maison": "Serpentard",
    "annee": "1",
    "description": "Je te laisserai edit",
-   "updated": 1795556412287
+   "image": "",
+   "updated": 1795556412287,
+   "sorts": [],
+   "cours": [],
+   "potions": [],
+   "relations": []
   }
  ],
  "bestiaire": [
