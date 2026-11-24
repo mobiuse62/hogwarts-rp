@@ -146,7 +146,6 @@
   },
   {
    "id": "mwu8iq8n4omqj",
-   "image": "images/mwu8iq8n4omqj-mwu8iq8n.jpg",
    "nom": "Sombral",
    "espece": "Créature magique",
    "danger": "Faible",
@@ -155,7 +154,21 @@
    "comportement": "Calme et loyal une fois apprivoisé, mais prompt à s'envoler.",
    "faiblesses": "Glacius, Arresto Momentum",
    "butin": "Crins de Sombral",
+   "image": "images/mwu8iq8n4omqj-mwu8iq8n.jpg",
    "updated": 1795496942454
+  },
+  {
+   "id": "mwu8jx181zw27",
+   "image": "images/mwu8jx181zw27-mwu8jx18.jpg",
+   "nom": "Licorne",
+   "espece": "Créature magique",
+   "danger": "Faible",
+   "habitat": "Forêt Interdite",
+   "description": "Cheval blanc pur doté d'une corne unique sur le front (dorée chez les poulains).",
+   "comportement": "Extrêmement farouche, fuit à grande vitesse à la moindre approche.",
+   "faiblesses": "Arresto Momentum, Glacius",
+   "butin": "Crins de Licorne",
+   "updated": 1795496997839
   }
  ],
  "deleted": {
