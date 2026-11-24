@@ -120,7 +120,6 @@
   },
   {
    "id": "mwu8fxzrwtpj1",
-   "image": "images/mwu8fxzrwtpj1-mwu8fxzr.jpg",
    "nom": "Crapaud violet géant",
    "espece": "Bête",
    "danger": "Inoffensif",
@@ -129,7 +128,21 @@
    "comportement": "Lent, passif, reste souvent immobile près de l'eau.",
    "faiblesses": "Levioso, Accio",
    "butin": "Verrues de crapaud",
+   "image": "images/mwu8fxzrwtpj1-mwu8fxzr.jpg",
    "updated": 1795496812421
+  },
+  {
+   "id": "mwu8h1hzkwneg",
+   "image": "images/mwu8h1hzkwneg-mwu8h1hz.jpg",
+   "nom": "Fléreur",
+   "espece": "Bête",
+   "danger": "Faible",
+   "habitat": "Côtes, montagnes, ruines",
+   "description": "Grand chat tacheté avec de longues oreilles et une queue en panache.",
+   "comportement": "Méfiant mais calme s'il n'est pas provoqué.",
+   "faiblesses": "Levioso, Arresto Momentum",
+   "butin": "Poils de Fléreur",
+   "updated": 1795496864088
   }
  ],
  "deleted": {
