@@ -39,6 +39,21 @@
    "relations": []
   }
  ],
+ "bestiaire": [
+  {
+   "id": "mwu83t8fi38sh",
+   "image": "images/mwu83t8fi38sh-mwu83t8f.jpg",
+   "nom": "Boursouf",
+   "espece": "Bête",
+   "danger": "Inoffensif",
+   "habitat": "Forêt Interdite, régions boisées",
+   "description": "Petite boule de poils ronde dotée d'une longue langue rose.",
+   "comportement": "Docile, curieux, se laisse approcher facilement.",
+   "faiblesses": "Levioso, Accio",
+   "butin": "Poils de Boursouf",
+   "updated": 1795496246278
+  }
+ ],
  "deleted": {
   "mwu6b5g18nq0f": 1795493437648
  }
