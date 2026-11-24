@@ -133,7 +133,6 @@
   },
   {
    "id": "mwu8h1hzkwneg",
-   "image": "images/mwu8h1hzkwneg-mwu8h1hz.jpg",
    "nom": "Fléreur",
    "espece": "Bête",
    "danger": "Faible",
@@ -142,7 +141,21 @@
    "comportement": "Méfiant mais calme s'il n'est pas provoqué.",
    "faiblesses": "Levioso, Arresto Momentum",
    "butin": "Poils de Fléreur",
+   "image": "images/mwu8h1hzkwneg-mwu8h1hz.jpg",
    "updated": 1795496864088
+  },
+  {
+   "id": "mwu8iq8n4omqj",
+   "image": "images/mwu8iq8n4omqj-mwu8iq8n.jpg",
+   "nom": "Sombral",
+   "espece": "Créature magique",
+   "danger": "Faible",
+   "habitat": "Marais du Nord, forêts sombres",
+   "description": "Cheval squelettique noir aux ailes de chauve-souris, visible uniquement par ceux qui ont vu la mort.",
+   "comportement": "Calme et loyal une fois apprivoisé, mais prompt à s'envoler.",
+   "faiblesses": "Glacius, Arresto Momentum",
+   "butin": "Crins de Sombral",
+   "updated": 1795496942454
   }
  ],
  "deleted": {
