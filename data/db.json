@@ -94,7 +94,6 @@
   },
   {
    "id": "mwu8dfnd3lmxl",
-   "image": "images/mwu8dfnd3lmxl-mwu8dfnd.jpg",
    "nom": "Focifère",
    "espece": "Bête",
    "danger": "Inoffensif",
@@ -103,7 +102,21 @@
    "comportement": "Très nerveux, s'enfuit rapidement au moindre bruit.",
    "faiblesses": "Arresto Momentum, Glacius",
    "butin": "Plumes de Focifère",
+   "image": "images/mwu8dfnd3lmxl-mwu8dfnd.jpg",
    "updated": 1795496695433
+  },
+  {
+   "id": "mwu8eka7hvkkr",
+   "image": "images/mwu8eka7hvkkr-mwu8eka7.jpg",
+   "nom": "Dirico",
+   "espece": "Bête",
+   "danger": "Inoffensif",
+   "habitat": "Côtes, plages, falaises",
+   "description": "Oiseau dodu incapable de voler, ressemblant au dodo.",
+   "comportement": "Docile, se téléporte dans un nuage de plumes s'il se sent menacé.",
+   "faiblesses": "Glacius, Arresto Momentum",
+   "butin": "Plumes de Dirico",
+   "updated": 1795496748068
   }
  ],
  "deleted": {
