@@ -216,7 +216,6 @@
   },
   {
    "id": "mwv8kjju8jipl",
-   "image": "images/mwv8kjju8jipl-mwv8kjju.jpg",
    "nom": "Phénix",
    "espece": "Créature magique",
    "danger": "Inoffensif",
@@ -225,7 +224,21 @@
    "comportement": "Pacifique, se laisse approcher une fois son nid atteint.",
    "faiblesses": "Aucun connu ?",
    "butin": "Plumes de Phénix",
+   "image": "images/mwv8kjju8jipl-mwv8kjju.jpg",
    "updated": 1795557493308
+  },
+  {
+   "id": "mwv8olznl8vsn",
+   "image": "images/mwv8olznl8vsn-mwv8olzn.jpg",
+   "nom": "Hippogriffe",
+   "espece": "Créature magique",
+   "danger": "Modéré",
+   "habitat": "Hautes terres, falaises",
+   "description": "Créature majestueuse mi-aigle mi-cheval aux serres acérées.",
+   "comportement": "Fier et ombrageux, exige le respect avant de se laisser approcher.",
+   "faiblesses": "Arresto Momentum, Glacius",
+   "butin": "Plumes d'Hippogriffe",
+   "updated": 1795557682978
   }
  ],
  "deleted": {
