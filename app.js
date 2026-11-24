@@ -95,7 +95,7 @@ async function gh(path, opts = {}) {
   }
   let res;
   try {
-    res = await fetch(API() + path, {
+    res = await fetch(path ? API() + path : API().slice(0, -1), {
       ...opts,
       headers: { ...headers(), ...(opts.body ? { 'Content-Type': 'application/json' } : {}) },
     });
