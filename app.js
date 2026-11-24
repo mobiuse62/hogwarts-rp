@@ -59,8 +59,9 @@ const hasToken = () => !!(cfg.token && cfg.owner && cfg.repo);
 const canEdit = () => writable && (hasToken() || !isHosted);
 
 function normalize(x) {
-  const out = { version: 1, profiles: [] };
+  const out = { version: 1, profiles: [], deleted: {} };
   if (!x || !Array.isArray(x.profiles)) return out;
+  if (x.deleted && typeof x.deleted === 'object') out.deleted = x.deleted;
   const arr = v => (Array.isArray(v) ? v.filter(i => i && typeof i === 'object') : []);
   out.profiles = x.profiles.filter(p => p && typeof p === 'object').map(p => ({
     id: String(p.id || uid()).replace(/[^\w-]/g, ''),
@@ -89,10 +90,16 @@ const explain = (s, m) => ({
 }[s] || m || ('Erreur ' + s));
 
 async function gh(path, opts = {}) {
-  const res = await fetch(API() + path, {
-    ...opts,
-    headers: { ...headers(), ...(opts.body ? { 'Content-Type': 'application/json' } : {}) },
-  });
+  let res;
+  try {
+    res = await fetch(API() + path, {
+      ...opts,
+      headers: { ...headers(), ...(opts.body ? { 'Content-Type': 'application/json' } : {}) },
+    });
+  } catch {
+    const e = new Error('Impossible de joindre api.github.com : bloqueur de pub / extension de confidentialité, VPN, antivirus ou réseau filtré ? Testez en navigation privée ou sur un autre réseau.');
+    e.status = 0; throw e;
+  }
   if (!res.ok) {
     let m = ''; try { m = (await res.json()).message; } catch { /* ignore */ }
     const e = new Error(explain(res.status, m)); e.status = res.status; throw e;
@@ -113,17 +120,48 @@ let queue = Promise.resolve();
 const enqueue = fn => { const r = queue.then(fn); queue = r.catch(() => {}); return r; };
 
 /* ================= Chargement / sauvegarde ================= */
+/** Lit data/db.json via l'API (toujours à jour, contrairement à Pages). */
+async function fetchRemote() {
+  try {
+    const f = await gh('contents/' + DATA_PATH + ref());
+    const bytes = f.content ? fromB64(f.content) : fromB64((await gh('git/blobs/' + f.sha)).content);
+    return { db: normalize(JSON.parse(new TextDecoder().decode(bytes))), sha: f.sha };
+  } catch (e) {
+    if (e.status === 404) return { db: normalize(null), sha: null };
+    throw e;
+  }
+}
+
+/** Fusionne deux versions : par profil, la plus récente gagne ; les suppressions sont mémorisées. */
+function mergeDB(remote, local) {
+  const del = { ...remote.deleted, ...local.deleted };
+  const map = new Map();
+  for (const p of [...remote.profiles, ...local.profiles]) {
+    if (del[p.id] && del[p.id] >= (p.updated || 0)) continue;
+    const o = map.get(p.id);
+    if (!o || (p.updated || 0) > (o.updated || 0)) map.set(p.id, p);
+  }
+  return { version: 1, profiles: [...map.values()], deleted: del };
+}
+
+async function refresh() {
+  if (!hasToken() || !writable || sync !== 'synced' || document.querySelector('dialog[open]')) return;
+  try {
+    const r = await fetchRemote();
+    remoteSha = r.sha;
+    const merged = mergeDB(r.db, db);
+    if (JSON.stringify(merged) !== JSON.stringify(db)) { db = merged; store(LS_DB, db); render(); }
+  } catch { /* silencieux */ }
+}
+
 async function loadDB() {
   remoteSha = null;
   if (hasToken()) {
     try {
-      const f = await gh('contents/' + DATA_PATH + ref());
-      remoteSha = f.sha;
-      const bytes = f.content ? fromB64(f.content) : fromB64((await gh('git/blobs/' + f.sha)).content);
-      db = normalize(JSON.parse(new TextDecoder().decode(bytes)));
+      const r = await fetchRemote();
+      db = r.db; remoteSha = r.sha;
       writable = true; setSync('synced'); return;
     } catch (e) {
-      if (e.status === 404) { db = normalize(null); writable = true; setSync('synced'); return; }
       writable = false; setSync('error'); toast('GitHub : ' + e.message + ' Modifications désactivées.', 'err');
     }
   }
@@ -154,22 +192,27 @@ function scheduleSave() {
 async function pushDB(retry = true) {
   const myRev = rev;
   setSync('saving');
-  const body = {
-    message: 'RP : mise à jour du registre',
-    content: b64(new TextEncoder().encode(JSON.stringify(db, null, 1))),
-    branch: cfg.branch,
-  };
-  if (remoteSha) body.sha = remoteSha;
   try {
-    const r = await gh('contents/' + DATA_PATH, { method: 'PUT', body: JSON.stringify(body) });
-    remoteSha = r.content.sha;
+    // On relit la version GitHub et on fusionne : les modifications des autres joueurs ne sont pas écrasées.
+    const r = await fetchRemote();
+    const before = JSON.stringify(db);
+    db = mergeDB(r.db, db);
+    const changed = JSON.stringify(db) !== before;
+    if (JSON.stringify(r.db) !== JSON.stringify(db)) {
+      const body = {
+        message: 'RP : mise à jour du registre',
+        content: b64(new TextEncoder().encode(JSON.stringify(db, null, 1))),
+        branch: cfg.branch,
+      };
+      if (r.sha) body.sha = r.sha;
+      const put = await gh('contents/' + DATA_PATH, { method: 'PUT', body: JSON.stringify(body) });
+      remoteSha = put.content.sha;
+    } else remoteSha = r.sha;
+    store(LS_DB, db);
     setSync(rev === myRev ? 'synced' : 'pending');
+    if (changed) render();
   } catch (e) {
-    if ((e.status === 409 || e.status === 422) && retry) {
-      try { remoteSha = (await gh('contents/' + DATA_PATH + ref())).sha; }
-      catch (e2) { if (e2.status === 404) remoteSha = null; else { setSync('error'); toast(e2.message, 'err'); return; } }
-      return pushDB(false);   // dernière écriture gagnante
-    }
+    if ((e.status === 409 || e.status === 422) && retry) return pushDB(false);
     setSync('error'); toast('Envoi impossible : ' + e.message, 'err');
   }
 }
@@ -452,8 +495,9 @@ function editProfile(existing) {
       if (!confirm(`Supprimer définitivement ${fullName(existing)} ?`)) return false;
       db.profiles = db.profiles.filter(x => x !== existing);
       for (const q of db.profiles) for (const r of q.relations) {
-        if (r.profileId === existing.id) { r.prenom = existing.prenom; r.nom = existing.nom; r.profileId = ''; }
+        if (r.profileId === existing.id) { r.prenom = existing.prenom; r.nom = existing.nom; r.profileId = ''; q.updated = Date.now(); }
       }
+      db.deleted[existing.id] = Date.now();
       deleteImage(existing.image);
       location.hash = '#/';
       commit();
@@ -639,7 +683,8 @@ function openSettings() {
     ],
     onSave: async data => {
       const prev = { ...cfg };
-      const next = { owner: data.owner, repo: data.repo, branch: data.branch || 'main', token: data.token };
+      const clean = s => String(s || '').trim().replace(/^https?:\/\/github\.com\//i, '').replace(/\.git$/, '').replace(/^\/+|\/+$/g, '');
+      const next = { owner: clean(data.owner).split('/')[0], repo: clean(data.repo).split('/').pop(), branch: data.branch || 'main', token: data.token };
       Object.assign(cfg, next);
       if (cfg.token) {
         if (!cfg.owner || !cfg.repo) { Object.assign(cfg, prev); return 'Indiquez le compte et le dépôt.'; }
@@ -671,6 +716,7 @@ $('#status').addEventListener('click', async () => {
   else openSettings();
 });
 addEventListener('hashchange', render);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) enqueue(refresh); });
 addEventListener('beforeunload', e => {
   if (hasToken() && (sync === 'pending' || sync === 'saving')) { e.preventDefault(); e.returnValue = ''; }
 });
