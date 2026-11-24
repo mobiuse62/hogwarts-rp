@@ -478,7 +478,7 @@ const SCHEMAS = {
 function editItem(p, kind, item) {
   const s = SCHEMAS[kind];
   openForm({
-    title: (item ? 'Modifier' : 'Ajouter') + ' · ' + s.label,
+    title: item ? s.add.replace('Ajouter', 'Modifier') : s.add,
     fields: s.fields(p), values: item || s.defaults,
     onSave: data => {
       const e = s.validate && s.validate(data); if (e) return e;
@@ -632,7 +632,7 @@ function viewBestiary() {
 }
 
 function beastCard(b) {
-  return h('a', { class: 'card', href: '#/b/' + b.id },
+  return h('a', { class: 'card beast', href: '#/b/' + b.id },
     portrait(asPortrait(b), 'card-img'),
     h('div', { class: 'card-body' },
       h('h3', {}, b.nom),
@@ -734,7 +734,7 @@ function panel(p, kind) {
 
 const rowSort = (it, btn) => h('div', { class: 'row' },
   h('div', { class: 'row-main' },
-    h('div', { class: 'row-title' }, h('strong', {}, it.nom), it.niveau && h('span', { class: 'tag' }, it.niveau), it.source && h('small', {}, '· ' + it.source)),
+    h('div', { class: 'row-title' }, h('strong', {}, it.nom), it.niveau && h('span', { class: 'tag' }, it.niveau), it.source && h('small', {}, it.source)),
     it.note && h('p', { class: 'note' }, it.note)),
   btn);
 
