@@ -9,7 +9,7 @@
    "annee": "1",
    "description": "Sang-pur",
    "image": "images/mwu68istgi3xu-mwu68ist.jpg",
-   "updated": 1795556443966,
+   "updated": 1795556450592,
    "sorts": [],
    "cours": [],
    "potions": [],
@@ -25,6 +25,14 @@
     {
      "id": "mwv7y33yfn3gl",
      "profileId": "mwv7wvmtzymnv",
+     "prenom": "",
+     "nom": "",
+     "statut": "Ami",
+     "note": ""
+    },
+    {
+     "id": "mwv7y8805cmkv",
+     "profileId": "mwv7xeny5b7ax",
      "prenom": "",
      "nom": "",
      "statut": "Ami",
