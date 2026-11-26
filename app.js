@@ -22,6 +22,9 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d; } };
 const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } };
+const root = document.documentElement;
+const isNox = () => root.dataset.theme === 'nox';
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 /** Création de nœuds DOM (aucun innerHTML : pas de risque d'injection). */
 function h(tag, props, ...kids) {
@@ -32,7 +35,7 @@ function h(tag, props, ...kids) {
     else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
     else n.setAttribute(k, v === true ? '' : v);
   }
-  for (const c of kids.flat()) if (c != null && c !== false) n.append(c);
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) n.append(c);
   return n;
 }
 
@@ -54,7 +57,7 @@ let remoteSha = null;
 let rev = 0;                 // incrémenté à chaque modification
 let sync = 'synced';         // synced | pending | saving | error
 let writable = true;         // false si la lecture via l'API a échoué (évite d'écraser des données)
-let ui = { tab: 'sorts', q: '', qb: '' };
+let ui = { tab: 'sorts', q: '', qb: '', focus: null };
 const imgCache = new Map();  // chemin → blob: URL (images tout juste envoyées)
 
 const hasToken = () => !!(cfg.token && cfg.owner && cfg.repo);
@@ -425,6 +428,200 @@ function imageField(current) {
   };
 }
 
+/* ================= Texte enrichi (notes de cours) ================= */
+/* La note ne stocke qu'un NOM de couleur (classe c-rouge, m-jaune…) ; la teinte réelle dépend du thème,
+   donc un texte rouge reste lisible en mode clair comme en mode Nox.  Valeurs : [clair, Nox]. */
+const INK_COLORS = {
+  rouge: ['#8e1b22', '#ff9a9a'], vert: ['#1f5a3a', '#7fd39a'], bleu: ['#28487f', '#8db4ff'],
+  violet: ['#5d3a8a', '#c9a6ff'], or: ['#8a6310', '#e6c26a'],
+};
+const MARK_COLORS = {
+  jaune: ['#f1d95e', '#6e5c12'], vert: ['#a9d89a', '#2f5a35'], rose: ['#f0a9bd', '#6e2f46'], bleu: ['#a9c9ec', '#2c4a72'],
+};
+const INK_DEFAULT = ['#2b1d12', '#e9dfc4'];
+{
+  const css = [];
+  for (const [n, [a, b]] of Object.entries(INK_COLORS)) css.push(`.c-${n}{color:${a}}html[data-theme=nox] .c-${n}{color:${b}}`);
+  for (const [n, [a, b]] of Object.entries(MARK_COLORS)) css.push(`.m-${n}{background:${a};border-radius:2px;padding:0 .12em}html[data-theme=nox] .m-${n}{background:${b}}`);
+  document.head.append(h('style', {}, css.join('')));
+}
+
+function hexOf(css) {   // « rgb(1, 2, 3) » ou « #abc » → « #aabbcc »
+  const s = String(css || '').trim().toLowerCase();
+  let m = s.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+  if (m) return '#' + [m[1], m[2], m[3]].map(n => (+n).toString(16).padStart(2, '0')).join('');
+  m = s.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/);
+  if (m) return '#' + (m[1].length === 3 ? [...m[1]].map(c => c + c).join('') : m[1]);
+  return '';
+}
+function colorName(pal, css) {
+  const hx = hexOf(css);
+  if (!hx) return '';
+  for (const [name, vals] of Object.entries(pal)) if (vals.includes(hx)) return name;
+  return '';
+}
+
+/* Nettoyage : on reconstruit un contenu neuf à partir d'une liste blanche. Aucun attribut n'est copié
+   (hors classes de la palette) : pas de script, de lien ni d'image possibles, même en cas de collage externe. */
+const RICH_DROP = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'TEMPLATE', 'NOSCRIPT', 'SVG', 'MATH', 'HEAD', 'TITLE', 'META', 'LINK']);
+const RICH_TAG = {
+  P: 'p', DIV: 'p', H1: 'h3', H2: 'h3', H3: 'h3', H4: 'h4', H5: 'h4', H6: 'h4', UL: 'ul', OL: 'ol', LI: 'li',
+  BLOCKQUOTE: 'blockquote', B: 'b', STRONG: 'b', I: 'i', EM: 'i', U: 'u', S: 's', STRIKE: 's', DEL: 's',
+};
+
+function richStyleChain(n, tag) {
+  const st = n.style || {};
+  const mk = t => document.createElement(t);
+  const fromClass = (prefix, pal) => {
+    for (const c of n.classList || []) if (c.startsWith(prefix) && Object.hasOwn(pal, c.slice(prefix.length))) return c.slice(prefix.length);
+    return '';
+  };
+  const sc = tag === 'FONT' ? n.getAttribute('color') : st.color;   // un style explicite l'emporte sur la classe
+  const ink = sc ? colorName(INK_COLORS, sc) : fromClass('c-', INK_COLORS);
+  const mark = st.backgroundColor ? colorName(MARK_COLORS, st.backgroundColor) : (fromClass('m-', MARK_COLORS) || (tag === 'MARK' ? 'jaune' : ''));
+  const chain = [];
+  if (ink || mark) {
+    const s = mk('span');
+    s.className = [ink && 'c-' + ink, mark && 'm-' + mark].filter(Boolean).join(' ');
+    chain.push(s);
+  }
+  if (/^(bold|[6-9]00)$/.test(st.fontWeight || '')) chain.push(mk('b'));
+  if (st.fontStyle === 'italic') chain.push(mk('i'));
+  const deco = st.textDecorationLine || st.textDecoration || '';
+  if (deco.includes('underline')) chain.push(mk('u'));
+  if (deco.includes('line-through')) chain.push(mk('s'));
+  return chain;
+}
+
+function cleanNodes(src, out) {
+  for (const n of src.childNodes) {
+    if (n.nodeType === 3) { out.append(n.nodeValue); continue; }
+    if (n.nodeType !== 1) continue;
+    const tag = n.tagName.toUpperCase();
+    if (RICH_DROP.has(tag)) continue;
+    if (tag === 'BR' || tag === 'HR') { out.append(document.createElement(tag.toLowerCase())); continue; }
+    let chain = [];
+    if (RICH_TAG[tag]) chain = [document.createElement(RICH_TAG[tag])];
+    else if (tag === 'SPAN' || tag === 'FONT' || tag === 'MARK') chain = richStyleChain(n, tag);
+    if (!chain.length) { cleanNodes(n, out); continue; }   // balise inconnue ou sans effet : on garde le texte
+    chain.forEach((c, i) => { if (i) chain[i - 1].append(c); });
+    cleanNodes(n, chain[chain.length - 1]);
+    out.append(chain[0]);
+  }
+}
+
+const looksHtml = s => /<\/?(p|div|br|hr|b|i|u|s|strong|em|span|ul|ol|li|h[1-6]|blockquote|mark|font)\b/i.test(s);
+
+/** Contenu stocké (HTML nettoyé, ou texte brut des anciennes notes) → fragment prêt à afficher. */
+function richFromString(str) {
+  const frag = document.createDocumentFragment();
+  str = String(str || '');
+  if (looksHtml(str)) cleanNodes(new DOMParser().parseFromString(str, 'text/html').body, frag);
+  else for (const line of str.split('\n')) if (line.trim()) frag.append(h('p', {}, line));
+  return frag;
+}
+const richView = str => h('div', { class: 'rich' }, richFromString(str));
+
+/** Texte seul (pour la recherche). */
+function richText(str) {
+  str = String(str || '');
+  if (!looksHtml(str)) return str;
+  const flat = str.replace(/<\/(p|li|h3|h4|blockquote|div)>|<br\s*\/?>/gi, ' ');
+  return new DOMParser().parseFromString(flat, 'text/html').body.textContent;
+}
+
+function richSerialize(ed) {
+  const box = document.createElement('div');
+  cleanNodes(ed, box);
+  const empty = n => n && n.nodeType === 1 && /^(P|H3|H4)$/i.test(n.tagName) && !n.textContent.trim() && !n.querySelector('hr');
+  while (empty(box.firstChild)) box.firstChild.remove();
+  while (empty(box.lastChild)) box.lastChild.remove();
+  if (!box.textContent.trim() && !box.querySelector('hr')) return '';
+  return box.innerHTML.trim();
+}
+
+function richField(initial) {
+  const ed = h('div', {
+    class: 'rich editor', contenteditable: 'true', role: 'textbox', 'aria-multiline': 'true',
+    'aria-label': 'Contenu du cours', 'data-ph': 'Écrivez votre cours ici…',
+  });
+  ed.append(richFromString(initial));
+  ed.addEventListener('focus', () => document.execCommand('defaultParagraphSeparator', false, 'p'));
+  ed.addEventListener('input', () => { if (!ed.textContent.trim() && !ed.querySelector('hr,li')) ed.replaceChildren(); });
+  ed.addEventListener('paste', e => {   // collage : on garde la mise en forme utile, jamais le reste
+    e.preventDefault();
+    const cd = e.clipboardData;
+    if (!cd) return;
+    const box = document.createElement('div');
+    const html = cd.getData('text/html');
+    if (html) cleanNodes(new DOMParser().parseFromString(html, 'text/html').body, box);
+    if (box.textContent.trim()) document.execCommand('insertHTML', false, box.innerHTML);
+    else document.execCommand('insertText', false, cd.getData('text/plain'));
+  });
+
+  const th = isNox() ? 1 : 0;
+  const run = (name, val) => { ed.focus(); document.execCommand(name, false, val); };
+  const block = tag => {
+    ed.focus();
+    const cur = String(document.queryCommandValue('formatBlock') || '').replace(/[<>]/g, '').toLowerCase();
+    document.execCommand('formatBlock', false, '<' + (cur === tag ? 'p' : tag) + '>');
+  };
+  const paint = (name, color) => {
+    ed.focus();
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand(name, false, color);
+    document.execCommand('styleWithCSS', false, false);
+  };
+  const btn = (content, title, fn, cls = '', style = '') =>
+    h('button', { class: 'rt-btn ' + cls, type: 'button', title, 'aria-label': title, style: style || null, onclick: fn }, content);
+  const group = (label, ...kids) => h('div', { class: 'rt-group', role: 'group', 'aria-label': label }, kids);
+  const sep = () => h('span', { class: 'rt-sep', 'aria-hidden': 'true' });
+  const cap = s => s[0].toUpperCase() + s.slice(1);
+
+  const bar = h('div', { class: 'rt', role: 'toolbar', 'aria-label': 'Mise en forme' },
+    group('Style du texte',
+      btn(h('b', {}, 'G'), 'Gras (Ctrl+B)', () => run('bold')),
+      btn(h('i', {}, 'I'), 'Italique (Ctrl+I)', () => run('italic')),
+      btn(h('u', {}, 'S'), 'Souligné (Ctrl+U)', () => run('underline')),
+      btn(h('s', {}, 'ab'), 'Barré', () => run('strikeThrough'))),
+    sep(),
+    group('Titres',
+      btn('Titre', 'Titre de section', () => block('h3')),
+      btn('Sous-titre', 'Sous-titre', () => block('h4'))),
+    sep(),
+    group('Blocs',
+      btn('• Liste', 'Liste à puces', () => run('insertUnorderedList')),
+      btn('1. Liste', 'Liste numérotée', () => run('insertOrderedList')),
+      btn('Citation', 'Citation', () => block('blockquote')),
+      btn('Ligne', 'Ligne de séparation', () => run('insertHorizontalRule'))),
+    sep(),
+    group('Couleur du texte',
+      h('span', { class: 'rt-label' }, 'Couleur'),
+      Object.entries(INK_COLORS).map(([n, c]) => btn('', 'Texte ' + n, () => paint('foreColor', c[th]), 'sw', 'background:' + c[th])),
+      btn('A', 'Couleur normale', () => paint('foreColor', INK_DEFAULT[th]), 'rt-reset')),
+    sep(),
+    group('Surlignage',
+      h('span', { class: 'rt-label' }, 'Surligner'),
+      Object.entries(MARK_COLORS).map(([n, c]) => btn('', 'Surligner en ' + n, () => paint('hiliteColor', c[th]), 'sw mk', 'background:' + c[th])),
+      btn('×', 'Retirer le surlignage', () => paint('hiliteColor', 'transparent'), 'rt-reset')),
+    sep(),
+    btn('Effacer la mise en forme', 'Effacer toute la mise en forme de la sélection', () => {
+      run('removeFormat');
+      paint('foreColor', INK_DEFAULT[th]);
+      paint('hiliteColor', 'transparent');
+      document.execCommand('formatBlock', false, '<p>');
+    }));
+  bar.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });   // garde la sélection
+
+  return {
+    type: 'custom', key: 'texte',
+    node: h('div', { class: 'field' },
+      h('span', { class: 'lbl' }, 'Contenu du cours'), bar, ed,
+      h('span', { class: 'help' }, 'Sélectionnez du texte, puis choisissez une mise en forme. Les couleurs s’adaptent au mode clair et au mode Nox.')),
+    get: () => richSerialize(ed),
+  };
+}
+
 /* ================= Schémas des 4 rubriques ================= */
 const SCHEMAS = {
   sorts: {
@@ -440,12 +637,13 @@ const SCHEMAS = {
   cours: {
     label: 'Cours', add: 'Ajouter une note de cours', empty: 'Aucune note de cours.',
     defaults: {},
-    fields: () => [
+    fields: (p, item) => [
       { key: 'titre', label: 'Titre', required: true, max: 120 },
       { key: 'matiere', label: 'Matière', list: 'dl-matieres', max: 80 },
       { key: 'date', label: 'Date (RP ou réelle)', max: 40, placeholder: 'ex. 12 septembre 1891' },
-      { key: 'texte', label: 'Contenu du cours', type: 'textarea', rows: 8, max: 8000 },
+      richField(item && item.texte),
     ],
+    validate: d => (d.texte.length > 60000 ? 'La note est trop longue : découpez-la en plusieurs cours.' : ''),
   },
   potions: {
     label: 'Potion', add: 'Ajouter une recette', empty: 'Aucune recette de potion.',
@@ -479,7 +677,7 @@ function editItem(p, kind, item) {
   const s = SCHEMAS[kind];
   openForm({
     title: item ? s.add.replace('Ajouter', 'Modifier') : s.add,
-    fields: s.fields(p), values: item || s.defaults,
+    fields: s.fields(p, item), values: item || s.defaults,
     onSave: data => {
       const e = s.validate && s.validate(data); if (e) return e;
       if (item) Object.assign(item, data); else p[kind].push({ id: uid(), ...data });
@@ -723,13 +921,25 @@ function panel(p, kind) {
   const items = p[kind];
   const editBtn = it => canEdit() && h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Modifier', onclick: e => { e.preventDefault(); editItem(p, kind, it); } }, 'Modifier');
   const render1 = { sorts: rowSort, cours: rowCours, potions: rowPotion, relations: rowRel }[kind];
-  return h('section', {},
+  const sec = h('section', {},
     h('div', { class: 'panel-bar' },
       h('h2', {}, TABS.find(t => t[0] === kind)[1]),
       canEdit() && h('button', { class: 'btn sm', type: 'button', onclick: () => editItem(p, kind, null) }, '+ ' + s.add)),
     items.length
-      ? h('ul', { class: 'rows' }, items.map(it => h('li', {}, render1(it, editBtn(it)))))
+      ? h('ul', { class: 'rows' }, items.map(it => h('li', { 'data-id': it.id }, render1(it, editBtn(it)))))
       : h('p', { class: 'empty' }, s.empty));
+  if (ui.focus && ui.focus.kind === kind) {   // arrivée depuis la recherche : on ouvre et on signale l'élément
+    const f = ui.focus; ui.focus = null;
+    requestAnimationFrame(() => {
+      const li = [...sec.querySelectorAll('li[data-id]')].find(x => x.dataset.id === String(f.id));
+      if (!li) return;
+      const d = li.querySelector('details'); if (d) d.open = true;
+      li.scrollIntoView({ block: 'center', behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+      li.classList.add('hit');
+      setTimeout(() => li.classList.remove('hit'), 2400);
+    });
+  }
+  return sec;
 }
 
 const rowSort = (it, btn) => h('div', { class: 'row' },
@@ -742,7 +952,7 @@ const rowCours = (it, btn) => h('details', { class: 'row' },
   h('summary', {},
     h('span', { class: 'sum-main' }, h('strong', {}, it.titre), it.matiere && h('span', { class: 'tag' }, it.matiere), it.date && h('small', {}, it.date)),
     btn),
-  h('div', { class: 'body' }, it.texte || h('small', {}, 'Pas de contenu.')));
+  h('div', { class: 'body' }, richText(it.texte).trim() || /<hr/i.test(it.texte || '') ? richView(it.texte) : h('small', {}, 'Pas de contenu.')));
 
 const rowPotion = (it, btn) => {
   const ing = String(it.ingredients || '').split('\n').map(x => x.trim()).filter(Boolean);
@@ -805,6 +1015,13 @@ function openSettings() {
         }, 'Effacer le token'),
         importIn)),
   };
+  const glowCb = h('input', { type: 'checkbox' });
+  glowCb.checked = glowOn;
+  glowCb.addEventListener('change', () => { glowOn = glowCb.checked; lsSet(LS_GLOW, glowOn ? '1' : '0'); root.classList.toggle('glow', glowOn && isNox()); });
+  const glowField = {
+    type: 'custom', key: '__glow', get: () => null,
+    node: h('label', { class: 'check' }, glowCb, h('span', {}, 'Lumière de baguette qui suit le curseur en mode Nox (ordinateur)')),
+  };
   openForm({
     title: 'Réglages',
     intro: 'Pour modifier le registre depuis GitHub Pages, collez votre token personnel (voir le tutoriel). Il reste uniquement dans ce navigateur.',
@@ -814,6 +1031,7 @@ function openSettings() {
       { key: 'repo', label: 'Nom du dépôt', max: 100 },
       { key: 'branch', label: 'Branche', max: 60 },
       { key: 'token', label: 'Token d’accès personnel', type: 'password', max: 200, placeholder: 'github_pat_…', help: hasToken() ? 'Un token est déjà enregistré ; laissez tel quel pour le conserver.' : '' },
+      glowField,
       tools,
     ],
     onSave: async data => {
@@ -843,7 +1061,207 @@ function openSettings() {
   });
 }
 
+/* ================= Thème : Lumos (clair) / Nox (nuit) ================= */
+const LS_THEME = 'hrp.theme', LS_GLOW = 'hrp.glow';
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* navigation privée : non mémorisé */ } };
+let glowOn = (() => { try { return localStorage.getItem(LS_GLOW) !== '0'; } catch { return true; } })();
+
+function applyTheme(nox) {
+  if (nox) root.dataset.theme = 'nox'; else delete root.dataset.theme;
+  $('meta[name=theme-color]').content = nox ? '#0b0d14' : '#261b13';
+  const b = $('#btn-theme');
+  b.textContent = nox ? 'Lumos' : 'Nox';
+  b.setAttribute('aria-label', nox ? 'Rallumer : passer au mode clair (Lumos)' : 'Éteindre : passer au mode nuit (Nox)');
+  root.classList.toggle('glow', nox && glowOn);
+}
+
+function toggleTheme(e) {
+  const nox = !isNox();
+  lsSet(LS_THEME, nox ? 'nox' : 'lumos');
+  if (reduceMotion.matches) return applyTheme(nox);
+  // La lumière (ou l'obscurité) jaillit du bouton et recouvre l'écran ; le thème change sous l'effet.
+  const r = e.currentTarget.getBoundingClientRect();
+  const fx = h('div', { class: 'flash ' + (nox ? 'to-nox' : 'to-lumos'), 'aria-hidden': 'true', style: `--fx:${r.left + r.width / 2}px;--fy:${r.top + r.height / 2}px` });
+  document.body.append(fx);
+  setTimeout(() => applyTheme(nox), 280);
+  setTimeout(() => fx.remove(), 1300);
+}
+
+let moveRaf = 0;   // la lumière de baguette suit le pointeur (mode Nox, ordinateur)
+addEventListener('pointermove', e => {
+  if (moveRaf || !root.classList.contains('glow')) return;
+  moveRaf = requestAnimationFrame(() => {
+    moveRaf = 0;
+    root.style.setProperty('--mx', e.clientX + 'px');
+    root.style.setProperty('--my', e.clientY + 'px');
+  });
+}, { passive: true });
+
+/* ================= Recherche globale ================= */
+const GROUPS = ['Personnages', 'Sortilèges', 'Cours', 'Potions', 'Relations', 'Bestiaire'];
+const KIND = { Personnages: 'Personnage', Sortilèges: 'Sortilège', Cours: 'Cours', Potions: 'Potion', Relations: 'Relation', Bestiaire: 'Créature' };
+
+/** Version normalisée d'un texte + table de correspondance vers les positions d'origine (accents ignorés). */
+function normMap(str) {
+  let s = '';
+  const map = [];
+  for (let i = 0; i < str.length; i++) {
+    const n = str[i].normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    for (const ch of n) { s += ch; map.push(i); }
+  }
+  return { s, map };
+}
+
+function highlight(text, words) {
+  const { s, map } = normMap(text);
+  const ranges = [];
+  for (const w of words) {
+    if (!w) continue;
+    for (let i = s.indexOf(w); i !== -1; i = s.indexOf(w, i + w.length)) ranges.push([map[i], map[i + w.length - 1] + 1]);
+  }
+  ranges.sort((a, b) => a[0] - b[0]);
+  const out = [];
+  let pos = 0;
+  for (const [a, b] of ranges) {
+    if (b <= pos) continue;
+    const from = Math.max(a, pos);
+    if (from > pos) out.push(text.slice(pos, from));
+    out.push(h('mark', {}, text.slice(from, b)));
+    pos = b;
+  }
+  if (pos < text.length) out.push(text.slice(pos));
+  return out;
+}
+
+function excerpt(text, words) {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  if (!flat) return '';
+  const { s, map } = normMap(flat);
+  let at = -1;
+  for (const w of words) { const i = w ? s.indexOf(w) : -1; if (i !== -1 && (at === -1 || i < at)) at = i; }
+  if (at === -1) return flat.length > 140 ? flat.slice(0, 140) + '…' : flat;
+  const from = Math.max(0, map[at] - 45);
+  return (from > 0 ? '…' : '') + flat.slice(from, from + 150) + (from + 150 < flat.length ? '…' : '');
+}
+
+function buildIndex() {
+  const rows = [];
+  const add = (group, title, owner, parts, go) => {
+    const text = parts.filter(Boolean).join('\n');
+    rows.push({ group, title, owner, text, go, nt: norm(title), nx: norm(text + ' ' + owner) });
+  };
+  for (const p of db.profiles) {
+    const owner = fullName(p);
+    add('Personnages', owner, '', [p.maison, p.annee && p.annee + 'e année', p.description], { hash: '#/p/' + p.id });
+    for (const s of p.sorts) add('Sortilèges', s.nom || '', owner, [s.niveau, s.source, s.note], { hash: '#/p/' + p.id, tab: 'sorts', item: s.id });
+    for (const c of p.cours) add('Cours', c.titre || '', owner, [c.matiere, c.date, richText(c.texte)], { hash: '#/p/' + p.id, tab: 'cours', item: c.id });
+    for (const o of p.potions) add('Potions', o.nom || '', owner, [o.effet, o.ingredients, o.preparation], { hash: '#/p/' + p.id, tab: 'potions', item: o.id });
+    for (const r of p.relations) {
+      const l = r.profileId && db.profiles.find(x => x.id === r.profileId);
+      add('Relations', fullName(l || r) || 'Inconnu', owner, [r.statut, r.note], { hash: '#/p/' + p.id, tab: 'relations', item: r.id });
+    }
+  }
+  for (const b of db.bestiaire) {
+    add('Bestiaire', b.nom, '', [b.espece, b.danger, b.habitat, b.description, b.comportement, b.faiblesses, b.butin], { hash: '#/b/' + b.id });
+  }
+  return rows;
+}
+
+function runSearch(rows, q) {
+  const words = norm(q).split(/\s+/).filter(Boolean);
+  const hits = [];
+  if (q.trim().length >= 2) {
+    for (const r of rows) {
+      if (!words.every(w => r.nt.includes(w) || r.nx.includes(w))) continue;
+      hits.push({ r, score: words.reduce((a, w) => a + (r.nt.includes(w) ? 3 : 0) + (r.nx.includes(w) ? 1 : 0), 0) });
+    }
+    hits.sort((a, b) => b.score - a.score || a.r.title.localeCompare(b.r.title, 'fr'));
+  }
+  return { words, hits: hits.map(x => x.r) };
+}
+
+function openSearch() {
+  if (document.querySelector('dialog[open]')) return;
+  const index = buildIndex();
+  const dlg = h('dialog', { class: 'modal search', 'aria-label': 'Recherche dans le registre' });
+  const input = h('input', { type: 'search', placeholder: 'Un sort, une potion, un cours, une créature…', 'aria-label': 'Rechercher dans tout le registre', autocomplete: 'off', spellcheck: 'false' });
+  const list = h('div', { class: 'results', 'aria-live': 'polite' });
+
+  const openHit = go => {
+    ui.focus = go.item ? { kind: go.tab, id: go.item } : null;
+    if (go.tab) ui.tab = go.tab;
+    dlg.close();
+    if (location.hash === go.hash) render(); else location.hash = go.hash;
+  };
+  const hitButton = (r, words) => {
+    const snip = excerpt(r.text, words);
+    return h('button', { class: 'hit-btn', type: 'button', onclick: () => openHit(r.go) },
+      h('span', { class: 'r-title' }, highlight(r.title, words), h('span', { class: 'tag' }, KIND[r.group])),
+      r.owner && h('span', { class: 'r-sub' }, 'chez ' + r.owner),
+      snip && h('span', { class: 'r-snip' }, highlight(snip, words)));
+  };
+
+  const draw = () => {
+    const q = input.value;
+    const { words, hits } = runSearch(index, q);
+    list.replaceChildren();
+    if (q.trim().length < 2) {
+      list.append(h('p', { class: 'help' }, 'Tapez au moins deux lettres. La recherche porte sur les personnages, les sortilèges, les cours, les potions, les relations et le bestiaire ; les accents sont ignorés.'));
+      return;
+    }
+    if (!hits.length) {
+      list.append(h('p', { class: 'help' }, `Aucun résultat pour « ${q.trim()} ». Essayez un mot plus court.`));
+      return;
+    }
+    list.append(h('p', { class: 'help' }, hits.length + (hits.length > 1 ? ' résultats' : ' résultat')));
+    for (const g of GROUPS) {
+      const rows = hits.filter(r => r.group === g);
+      if (!rows.length) continue;
+      list.append(
+        h('h3', {}, `${g} (${rows.length})`),
+        h('ul', { class: 'hits' }, rows.slice(0, 8).map(r => h('li', {}, hitButton(r, words)))));
+      if (rows.length > 8) list.append(h('p', { class: 'help' }, `… et ${rows.length - 8} autres : précisez la recherche pour les voir.`));
+    }
+  };
+
+  input.addEventListener('input', draw);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); dlg.close(); return; }   // Chrome vide sinon le champ avant de fermer
+    if (e.key !== 'Enter') return;
+    const first = dlg.querySelector('.hit-btn');
+    if (first) { e.preventDefault(); first.click(); }
+  });
+  dlg.addEventListener('keydown', e => {   // flèches : on parcourt les résultats
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const items = [...dlg.querySelectorAll('.hit-btn')];
+    if (!items.length) return;
+    e.preventDefault();
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') (items[i + 1] || items[0]).focus();
+    else if (i <= 0) input.focus();
+    else items[i - 1].focus();
+  });
+  dlg.append(h('div', { class: 'form' },
+    h('h2', {}, 'Rechercher dans le registre'),
+    input, list,
+    h('div', { class: 'actions' }, h('button', { class: 'btn ghost', type: 'button', onclick: () => dlg.close() }, 'Fermer'))));
+  dlg.addEventListener('close', () => dlg.remove());
+  dlg.addEventListener('mousedown', e => { if (e.target === dlg) dlg.close(); });
+  document.body.append(dlg);
+  dlg.showModal();
+  draw();
+  input.focus();
+}
+
+addEventListener('keydown', e => {
+  const a = document.activeElement;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openSearch(); }
+  else if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !a.isContentEditable) { e.preventDefault(); openSearch(); }
+});
+
 /* ================= Démarrage ================= */
+$('#btn-theme').addEventListener('click', toggleTheme);
+$('#btn-search').addEventListener('click', openSearch);
 $('#btn-settings').addEventListener('click', openSettings);
 $('#status').addEventListener('click', async () => {
   if (hasToken() && !writable) { await loadDB(); render(); }
@@ -856,6 +1274,7 @@ addEventListener('beforeunload', e => {
   if (hasToken() && (sync === 'pending' || sync === 'saving')) { e.preventDefault(); e.returnValue = ''; }
 });
 
+applyTheme(isNox());
 renderStatus();
 app.append(h('p', { class: 'loading' }, 'Ouverture du grimoire…'));
 loadDB().then(() => { render(); renderStatus(); });
